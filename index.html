@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Life Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 380px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      margin-bottom: 10px;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #667eea;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background: #5a67d8;
+    }
+
+    .task {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: 0.3s;
+    }
+
+    .task.done span {
+      text-decoration: line-through;
+      color: #2e7d32;
+    }
+
+    .actions button {
+      width: auto;
+      padding: 6px 8px;
+      margin-left: 5px;
+      font-size: 14px;
+    }
+
+    .fade-out {
+      opacity: 0;
+      transform: translateX(20px);
+      transition: 0.3s;
+    }
+
+    /* MODALS */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-box {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+      width: 260px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+
+    .modal-buttons button {
+      width: 48%;
+    }
+
+    #confirmDeleteBtn {
+      background: #e74c3c;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* SETTINGS MENU BUTTONS */
+    .menu-box button {
+      width: 100%;
+      margin: 5px 0;
+    }
+
+    .task.anim-done {
+  transform: scale(1.03);
+  transition: all 0.2s ease;
+}
+
+.task.done {
+  background: #e6f9ed;
+}
+
+.task.done span {
+  text-decoration: line-through;
+  color: #2e7d32;
+  font-weight: bold;
+}
+#editInput {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+.priority-high {
+  border-left: 6px solid #e74c3c;
+}
+
+.priority-medium {
+  border-left: 6px solid #f1c40f;
+}
+
+.priority-low {
+  border-left: 6px solid #607d8b;
+}
+
+#priorityModal .modal-buttons button {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  font-weight: bold;
+}
+.task span {
+  font-size: 20px;
+  font-weight: 600;
+  display: block;
+}
+#notesInput {
+  width: 100%;
+  height: 120px;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+}
+#popupContainer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+}
+
+.popup {
+  background: white;
+  padding: 12px 15px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  min-width: 200px;
+  animation: slideIn 0.3s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+#loginScreen {
+  display: flex;
+}
+#logoutBtn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+
+  width: auto;
+  padding: 10px 15px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: linear-gradient(135deg, #ff6b6b, #e74c3c);
+  color: white;
+
+  font-size: 14px;
+  cursor: pointer;
+
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+#logoutBtn:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #ff5252, #c0392b);
+}
+
+#logoutBtn:active {
+  transform: scale(0.97);
+}
+  </style>
+</head>
+
+<body>
+<div id="popupContainer"></div>
+<div id="loginScreen" class="modal">
+  <div class="modal-box">
+    <h3>Login</h3>
+    <input id="emailInput" placeholder="Email..." />
+<input id="passwordInput" type="password" placeholder="Password..." />
+<button onclick="login()">Login / Sign up</button>
+    <button onclick="login()">Enter</button>
+    <button onclick="googleLogin()" style="background:#db4437;">
+  Continue with Google
+</button>
+  </div>
+</div>
+<div class="container">
+  <h2>Life Dashboard</h2>
+
+  <input id="taskInput" placeholder="New task...">
+  <button onclick="addTask()">Add Task</button>
+  <div id="stats" style="margin: 10px 0; font-size: 14px; color: #333;">
+  ✅ Done: 0 | 📊 Total: 0 | ⏳ Left: 0
+  <div style="margin-top:8px; background:#eee; border-radius:10px; overflow:hidden; height:10px;">
+    <div id="progressBar" style="height:10px; width:0%; background:#667eea; transition:0.3s;"></div>
+  </div>
+
+  <div id="progressText" style="margin-top:5px; font-size:12px;"></div>
+</div>
+  <button onclick="openReminders()" style="background:#444;">
+  📌 Daily Reminders
+</button>
+  <div id="taskList"></div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" class="modal hidden">
+  <div class="modal-box" id="settingsContent"></div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div id="confirmDeleteBox" class="modal hidden">
+  <div class="modal-box">
+    <p>Are you sure you want to delete this task?</p>
+    <div class="modal-buttons">
+      <button onclick="closeDeleteConfirm()">Cancel</button>
+      <button id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+<div id="editModal" class="modal hidden">
+  <div class="modal-box">
+    <p>Are you sure you want to edit this task?</p>
+
+    <input id="editInput" placeholder="New task name..." />
+
+    <div class="modal-buttons">
+      <button onclick="closeEditModal()">Cancel</button>
+      <button onclick="confirmEdit()" style="background:#667eea;color:white;">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+<div id="priorityModal" class="modal hidden">
+  <div class="modal-box">
+    <p><b>Choose priority</b></p>
+
+    <div class="modal-buttons" style="flex-direction: column; gap: 10px;">
+
+      <button onclick="setPriorityValue('high')" style="background:#e74c3c; color:white;">
+        🔴 High Priority
+      </button>
+
+      <button onclick="setPriorityValue('medium')" style="background:#f1c40f; color:black;">
+        🟡 Medium Priority
+      </button>
+
+      <button onclick="setPriorityValue('low')" style="background:#607d8b; color:white;">
+        ⚫ Low Priority
+      </button>
+
+      <button onclick="closePriorityModal()" style="background:#ccc;">
+        Cancel
+      </button>
+
+    </div>
+  </div>
+</div>
+<div id="dateModal" class="modal hidden">
+  <div class="modal-box">
+    <p><b>Select due date</b></p>
+
+    <input type="date" id="dateInput" />
+
+    <div class="modal-buttons">
+      <button onclick="closeDateModal()">Cancel</button>
+      <button onclick="confirmDate()" style="background:#667eea;color:white;">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+<div id="notesModal" class="modal hidden">
+  <div class="modal-box">
+    <p><b>Task Notes</b></p>
+
+    <textarea id="notesInput" placeholder="Write your notes..."></textarea>
+
+    <div class="modal-buttons">
+      <button onclick="closeNotesModal()">Cancel</button>
+      <button onclick="confirmNotes()" style="background:#667eea;color:white;">
+        Save
+      </button>
+    </div>
+  </div>
+</div>
+<div id="reminderModal" class="modal hidden">
+  <div class="modal-box">
+    <p><b>Daily Reminders</b></p>
+
+    <input id="reminderInput" placeholder="Add a reminder..." />
+
+    <button onclick="addReminder()">Add</button>
+
+    <div id="reminderList"></div>
+
+    <button onclick="closeReminderModal()">Close</button>
+  </div>
+</div>
+<button id="logoutBtn" onclick="logout()">
+  🚪 Logout
+</button>
+
+<script>
+    const firebaseConfig = {
+  apiKey: "AIzaSyCPPGDFncvVkuB-IzAahMB00VjDl-xrT_s",
+  authDomain: "life-tracker-9f83f.firebaseapp.com",
+  projectId: "life-tracker-9f83f",
+  storageBucket: "life-tracker-9f83f.firebasestorage.app",
+  messagingSenderId: "1041471577586",
+  appId: "1:1041471577586:web:8b96d26f747b68c2505f6b"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+// Initialize Auth
+const auth = firebase.auth();
+auth.onAuthStateChanged(user => {
+  console.log(user);
+});
+    let currentUser = localStorage.getItem("user") || null;
+    let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
+    let notesIndex = null;
+    let dateIndex = null;
+    let priorityIndex = null;
+    let editIndex = null;
+ let tasks = JSON.parse(localStorage.getItem('tasks_' + currentUser)) || [];
+  let currentIndex = null;
+function login() {
+  const email = document.getElementById("emailInput").value.trim();
+  const password = document.getElementById("passwordInput").value.trim();
+
+  if (!email || !password) {
+    alert("Please enter email and password");
+    return;
+  }
+
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .then(userCredential => {
+      currentUser = userCredential.user.uid;
+      document.getElementById("loginScreen").classList.add("hidden");
+      loadUserData();
+    })
+    .catch(() => {
+      // if account doesn't exist → create it
+      firebase.auth().createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          currentUser = userCredential.user.uid;
+          document.getElementById("loginScreen").classList.add("hidden");
+          loadUserData();
+        })
+        .catch(err => {
+          alert(err.message);
+        });
+    });
+}
+  function saveTasks() {
+  localStorage.setItem('tasks_' + currentUser, JSON.stringify(tasks));
+}
+  function addTask() {
+    const input = document.getElementById('taskInput');
+    const text = input.value.trim();
+
+    if (!text) return;
+
+    tasks.push({
+      text,
+      done: false,
+      priority: 'low',
+      due: '',
+      notes: ''
+    });
+
+    input.value = '';
+    saveTasks();
+    renderTasks();
+    updateStats();
+  }
+
+  function renderTasks() {
+    const list = document.getElementById('taskList');
+    list.innerHTML = '';
+
+    tasks.forEach((task, index) => {
+      const div = document.createElement('div');
+      div.className = 'task priority-' + (task.priority || 'low') + (task.done ? ' done' : '');
+
+      div.innerHTML = `
+  <div>
+    <span>${task.text}</span>
+    <div style="font-size:14px; margin-top:4px; color:#555;">
+  ${getPriorityIcon(task.priority)}
+  ${task.due ? " 📅 " + formatDate(task.due) : ""}
+</div>
+  </div>
+
+  <div class="actions">
+    <button onclick="openSettings(${index})">⚙</button>
+  </div>
+`;
+
+      list.appendChild(div);
+    });
+    updateStats();
+  }
+
+  function toggleTask(index) {
+  const el = document.querySelectorAll('.task')[index];
+  el.classList.add('anim-done');
+
+  setTimeout(() => {
+    tasks[index].done = !tasks[index].done;
+    saveTasks();
+    renderTasks();
+
+    // if settings is open, refresh it
+    if (!document.getElementById('settingsModal').classList.contains('hidden')) {
+      openSettings(index);
+    }
+  }, 150);
+  updateStats();
+}
+
+  /* SETTINGS */
+  function openSettings(index) {
+    currentIndex = index;
+
+    document.getElementById('settingsContent').innerHTML = `
+      <p><b>Task Settings</b></p>
+
+      <button onclick="toggleTask(${index})">
+  ${tasks[index].done ? "↩ Undo Complete" : "✓ Mark Done"}
+</button>
+      <button onclick="editTask(${index})">✏ Edit Name</button>
+      <button onclick="setPriority(${index})">Priority</button>
+      <button onclick="setDate(${index})">📅 Date</button>
+      <button onclick="editNotes(${index})">📝 Notes</button>
+
+      <button onclick="openDeleteConfirm(${index})" style="background:#e74c3c;color:white;">
+        ✗ Delete
+      </button>
+
+      <button onclick="closeSettings()">Close</button>
+    `;
+
+    document.getElementById('settingsModal').classList.remove('hidden');
+  }
+
+  function closeSettings() {
+    document.getElementById('settingsModal').classList.add('hidden');
+  }
+
+  /* DELETE FLOW */
+  function openDeleteConfirm(index) {
+    currentIndex = index;
+    document.getElementById('confirmDeleteBox').classList.remove('hidden');
+  }
+
+  function closeDeleteConfirm() {
+    document.getElementById('confirmDeleteBox').classList.add('hidden');
+  }
+
+  function confirmDelete() {
+    const el = document.querySelectorAll('.task')[currentIndex];
+    el.classList.add('fade-out');
+
+    setTimeout(() => {
+      tasks.splice(currentIndex, 1);
+      saveTasks();
+      renderTasks();
+    }, 300);
+
+    closeDeleteConfirm();
+    closeSettings();
+    updateStats();
+  }
+
+  /* EDIT FEATURES */
+  function editTask(index) {
+  editIndex = index;
+
+  document.getElementById("editInput").value = tasks[index].text;
+  document.getElementById("editModal").classList.remove("hidden");
+
+  closeSettings();
+}
+
+  function setPriority(index) {
+  priorityIndex = index;
+  document.getElementById("priorityModal").classList.remove("hidden");
+  closeSettings();
+}
+
+  function setDate(index) {
+  dateIndex = index;
+
+  document.getElementById("dateInput").value = tasks[index].due || "";
+  document.getElementById("dateModal").classList.remove("hidden");
+
+  closeSettings();
+}
+
+  function editNotes(index) {
+  notesIndex = index;
+
+  document.getElementById("notesInput").value = tasks[index].notes || "";
+  document.getElementById("notesModal").classList.remove("hidden");
+
+  closeSettings();
+}
+
+  /* ENTER KEY */
+  document.getElementById("taskInput").addEventListener("keydown", e => {
+    if (e.key === "Enter") addTask();
+  });
+
+  renderTasks();
+  function closeEditModal() {
+  document.getElementById("editModal").classList.add("hidden");
+  editIndex = null;
+}
+
+function confirmEdit() {
+  const newText = document.getElementById("editInput").value.trim();
+
+  if (!newText) return;
+
+  tasks[editIndex].text = newText;
+  saveTasks();
+  renderTasks();
+
+  closeEditModal();
+}
+function setPriorityValue(level) {
+  tasks[priorityIndex].priority = level;
+
+  saveTasks();
+  renderTasks();
+
+  closePriorityModal();
+}
+
+function closePriorityModal() {
+  document.getElementById("priorityModal").classList.add("hidden");
+  priorityIndex = null;
+}
+function getPriorityIcon(priority) {
+  if (priority === 'high') return '🔴';
+  if (priority === 'medium') return '🟡';
+  return '⚫';
+}
+function closeDateModal() {
+  document.getElementById("dateModal").classList.add("hidden");
+  dateIndex = null;
+}
+
+function confirmDate() {
+  const value = document.getElementById("dateInput").value;
+
+  tasks[dateIndex].due = value;
+  saveTasks();
+  renderTasks();
+
+  closeDateModal();
+}
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+
+  if (isNaN(date)) return "";
+
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short"
+  });
+}
+function closeNotesModal() {
+  document.getElementById("notesModal").classList.add("hidden");
+  notesIndex = null;
+}
+
+function confirmNotes() {
+  tasks[notesIndex].notes = document.getElementById("notesInput").value;
+
+  saveTasks();
+  renderTasks();
+
+  closeNotesModal();
+}
+function saveReminders() {
+  localStorage.setItem('reminders', JSON.stringify(reminders));
+}
+function openReminders() {
+  document.getElementById("reminderModal").classList.remove("hidden");
+  renderReminders();
+}
+
+function closeReminderModal() {
+  document.getElementById("reminderModal").classList.add("hidden");
+}
+function addReminder() {
+  const input = document.getElementById("reminderInput");
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  reminders.push(text);
+  input.value = "";
+
+  saveReminders();
+  renderReminders();
+}
+
+function removeReminder(index) {
+  reminders.splice(index, 1);
+  saveReminders();
+  renderReminders();
+}
+function renderReminders() {
+  const list = document.getElementById("reminderList");
+  list.innerHTML = "";
+
+  reminders.forEach((r, i) => {
+    const div = document.createElement("div");
+
+    div.innerHTML = `
+      <span>${r}</span>
+      <button onclick="removeReminder(${i})">✗</button>
+    `;
+
+    list.appendChild(div);
+  });
+}
+function showDailyReminders() {
+  reminders.forEach((msg, i) => {
+    setTimeout(() => {
+      showPopup("📌 " + msg);
+    }, i * 800);
+  });
+}
+function showPopup(message) {
+  const container = document.getElementById("popupContainer");
+
+  const div = document.createElement("div");
+  div.className = "popup";
+
+  div.innerHTML = `
+    <span>${message}</span>
+    <button onclick="this.parentElement.remove()">✖</button>
+  `;
+
+  container.appendChild(div);
+
+  // auto remove after 5 seconds
+  setTimeout(() => {
+    div.remove();
+  }, 5000);
+}
+function updateStats() {
+  const total = tasks.length;
+  const done = tasks.filter(t => t.done).length;
+  const left = total - done;
+
+  document.getElementById("stats").firstChild.textContent =
+  `✅ Done: ${done} | 📊 Total: ${total} | ⏳ Left: ${left}`;
+}
+function loadUserData() {
+  tasks = JSON.parse(localStorage.getItem('tasks_' + currentUser)) || [];
+  renderTasks();
+  updateStats();
+  showDailyReminders();
+}
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user.uid;
+
+    document.getElementById("loginScreen").classList.add("hidden");
+    loadUserData();
+  }
+});
+function googleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  firebase.auth().signInWithPopup(provider)
+    .then(result => {
+      currentUser = result.user.uid;
+
+      document.getElementById("loginScreen").classList.add("hidden");
+      loadUserData();
+    })
+    .catch(err => {
+      alert(err.message);
+    });
+}
+function logout() {
+  firebase.auth().signOut().then(() => {
+    location.reload();
+  });
+}
+</script>
+
+</body>
+</html>
