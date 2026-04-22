@@ -220,7 +220,7 @@
 #loginScreen {
   display: flex;
 }
-#logoutBtn {
+#userMenu {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -231,7 +231,7 @@
   border: none;
   border-radius: 10px;
 
-  background: linear-gradient(135deg, #ff6b6b, #e74c3c);
+
   color: white;
 
   font-size: 14px;
@@ -241,18 +241,27 @@
   transition: all 0.3s ease;
 }
 
-#logoutBtn:hover {
+#userMenu:hover {
   transform: scale(1.05);
-  background: linear-gradient(135deg, #ff5252, #c0392b);
+  background: linear-gradient(135deg, #667eea, #764ba2);
 }
 
-#logoutBtn:active {
+#userMenu:active {
   transform: scale(0.97);
+}
+#welcomeText {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
 }
   </style>
 </head>
 
 <body>
+    <div id="welcomeText"></div>
 <div id="popupContainer"></div>
 <div id="loginScreen" class="modal">
   <div class="modal-box">
@@ -380,9 +389,21 @@
     <button onclick="closeReminderModal()">Close</button>
   </div>
 </div>
+
+<div id="userMenu">
+  <button onclick="toggleUserMenu()">👤</button>
+
+  <div id="userDropdown" class="hidden">
+    <p id="userEmail"></p>
+
+    <input id="displayNameInput" placeholder="Change name..." />
+    <button onclick="saveDisplayName()">Save</button>
 <button id="logoutBtn" onclick="logout()">
   🚪 Logout
 </button>
+    
+  </div>
+</div>
 
 <script>
     const firebaseConfig = {
@@ -412,7 +433,10 @@ auth.onAuthStateChanged(user => {
 function login() {
   const email = document.getElementById("emailInput").value.trim();
   const password = document.getElementById("passwordInput").value.trim();
-
+document.getElementById("welcomeText").textContent =
+  "Welcome " + name + "!";
+  document.getElementById("userEmail").textContent =
+  "User: " + name;
   if (!email || !password) {
     alert("Please enter email and password");
     return;
@@ -778,6 +802,22 @@ function logout() {
   firebase.auth().signOut().then(() => {
     location.reload();
   });
+  localStorage.removeItem("user");
+}
+document.getElementById("welcomeText").textContent =
+  "Welcome " + currentUser + "!";
+  function toggleUserMenu() {
+  document.getElementById("userDropdown").classList.toggle("hidden");
+}
+function saveDisplayName() {
+  const name = document.getElementById("displayNameInput").value.trim();
+  if (!name) return;
+
+  currentUser = name;
+  localStorage.setItem("user", name);
+
+  document.getElementById("welcomeText").textContent =
+    "Welcome " + name + "!";
 }
 </script>
 
