@@ -23,6 +23,27 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.2);
       text-align: center;
       width: 380px;
+      margin-left: 220px;
+    }
+
+    .studyContainer {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 700px;
+      margin-left: 220px;
+    }
+
+    .mathsContainer {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 380px;
+      margin-left: 220px;
     }
 
     input {
@@ -256,7 +277,57 @@
   font-size: 24px;
   font-weight: bold;
   color: white;
+  margin-left: 250px;
 }
+#sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 200px;
+  background: rgba(0,0,0,0.2);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#sidebar button {
+  background: white;
+  color: black;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+#sidebar button:hover {
+  background: #ddd;
+}
+
+.sidebar{
+  display: grid;
+  grid-template-columns: repeat(3, 175px); 
+  gap: 0px 65px; 
+}
+.sidebar button {
+  background: rgb(228, 228, 228);
+  color: black;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 220px;
+  margin-top: 10px;
+  
+}
+
+.sidebar button:hover {
+  background: #d1d1d1;
+}
+
   </style>
 </head>
 
@@ -275,6 +346,15 @@
 </button>
   </div>
 </div>
+<div id="sidebar">
+  <h3>📂 Categories</h3>
+
+  <button onclick="showSection('all')">🏠 All</button>
+  <button onclick="showSection('study')">📚 Study</button>
+  <button onclick="window.location.href='finance.html'">💰 Finance</button>
+  <button onclick="window.location.href='habits.html'">🔥 Habits</button>
+  <button onclick="window.location.href='important.html'">⭐ Important</button>
+</div>
 <div class="container">
   <h2>Life Dashboard</h2>
 
@@ -292,6 +372,34 @@
   📌 Daily Reminders
 </button>
   <div id="taskList"></div>
+</div>
+<div class="studyContainer hidden">
+  <h2>📚 Study</h2>
+  <input id="taskInput" placeholder="search...">
+  <button onclick="addTask()">search</button>
+  <div id="stats" style="margin: 10px 0; font-size: 14px; color: #333;">
+  ✅ Done: 0 | 📊 Total: 0 | ⏳ Left: 0
+  <div style="margin-top:8px; background:#000000; border-radius:0px; overflow:hidden; height:0px; margin-top: 10px;">
+    <div id="progressBar" style="height:0px; width:0%; background:#667eea; transition:0.3s;"></div>
+  </div>
+
+  <div id="progressText" style="margin-top:5px; font-size:0px;"></div>
+</div>
+
+  <div id="category" class="sidebar">
+    <div id="taskList"></div>
+    <div class="btn1">
+      <button onclick="setFilter('maths'); showSection('maths')">Maths</button>
+    </div>
+  </div>
+</div>
+<div class="mathsContainer hidden">
+  <h2>📐 Maths Dashboard</h2>
+
+  <input id="mathTaskInput" placeholder="New maths task...">
+  <button onclick="addMathTask()">Add Task</button>
+
+  <div id="mathTaskList"></div>
 </div>
 
 <!-- SETTINGS MODAL -->
@@ -417,24 +525,26 @@
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 // Initialize Auth
 const auth = firebase.auth();
 auth.onAuthStateChanged(user => {
   console.log(user);
 });
-    let currentUser = localStorage.getItem("user") || null;
+    let currentUser = null;
+    let tasks = [];
+    let mathTasks = [];
     let reminders = JSON.parse(localStorage.getItem('reminders')) || [];
     let notesIndex = null;
     let dateIndex = null;
     let priorityIndex = null;
     let editIndex = null;
- let tasks = JSON.parse(localStorage.getItem('tasks_' + currentUser)) || [];
-  let currentIndex = null;
+ let currentIndex = null;
 function login() {
   const email = document.getElementById("emailInput").value.trim();
   const password = document.getElementById("passwordInput").value.trim();
 document.getElementById("welcomeText").textContent =
-  "Welcome " + name + "!";
+  "Welcome " + email + "!";
   document.getElementById("userEmail").textContent =
   "User: " + name;
   if (!email || !password) {
@@ -475,7 +585,8 @@ document.getElementById("welcomeText").textContent =
       done: false,
       priority: 'low',
       due: '',
-      notes: ''
+      notes: '',
+      category: currentFilter || "all"
     });
 
     input.value = '';
@@ -489,6 +600,7 @@ document.getElementById("welcomeText").textContent =
     list.innerHTML = '';
 
     tasks.forEach((task, index) => {
+      if (currentFilter && currentFilter !== "all" && task.category !== currentFilter) return;
       const div = document.createElement('div');
       div.className = 'task priority-' + (task.priority || 'low') + (task.done ? ' done' : '');
 
@@ -771,7 +883,8 @@ function updateStats() {
   `✅ Done: ${done} | 📊 Total: ${total} | ⏳ Left: ${left}`;
 }
 function loadUserData() {
-  tasks = JSON.parse(localStorage.getItem('tasks_' + currentUser)) || [];
+  if (!currentUser) return;
+
   renderTasks();
   updateStats();
   showDailyReminders();
@@ -779,9 +892,18 @@ function loadUserData() {
 firebase.auth().onAuthStateChanged(user => {
   if (user) {
     currentUser = user.uid;
+    tasks = JSON.parse(localStorage.getItem('tasks_' + currentUser)) || [];
 
     document.getElementById("loginScreen").classList.add("hidden");
+
     loadUserData();
+
+    document.getElementById("welcomeText").textContent =
+      "Welcome " + (user.displayName || user.email);
+ 
+  } else {
+    currentUser = null;
+    document.getElementById("loginScreen").classList.remove("hidden");
   }
 });
 function googleLogin() {
@@ -802,10 +924,7 @@ function logout() {
   firebase.auth().signOut().then(() => {
     location.reload();
   });
-  localStorage.removeItem("user");
 }
-document.getElementById("welcomeText").textContent =
-  "Welcome " + currentUser + "!";
   function toggleUserMenu() {
   document.getElementById("userDropdown").classList.toggle("hidden");
 }
@@ -813,11 +932,78 @@ function saveDisplayName() {
   const name = document.getElementById("displayNameInput").value.trim();
   if (!name) return;
 
-  currentUser = name;
-  localStorage.setItem("user", name);
 
   document.getElementById("welcomeText").textContent =
     "Welcome " + name + "!";
+}
+let currentFilter = "all";
+
+function setFilter(filter) {
+  currentFilter = filter;
+  renderTasks();
+}
+const category = currentFilter === "all" ? "study" : currentFilter;
+
+function showSection(section) {
+  const main = document.querySelector(".container");
+  const study = document.querySelector(".studyContainer");
+
+  // hide everything first
+  main.classList.add("hidden");
+  study.classList.add("hidden");
+
+  if (section === "all") {
+    currentFilter = "all";
+    main.classList.remove("hidden");
+  }
+
+  if (section === "study") {
+    study.classList.remove("hidden");
+  }
+
+  if (section === "maths") {
+    currentFilter = "maths";   // 🔥 key line
+    main.classList.remove("hidden"); // reuse same dashboard
+  }
+
+  renderTasks(); // 🔥 refresh tasks
+}
+function addMathTask() {
+  const input = document.getElementById('mathTaskInput');
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  mathTasks.push({
+      text,
+  done: false,
+  priority: 'low',
+  due: '',
+  notes: '',
+  });
+  renderMathTasks();
+} 
+
+function renderMathTasks() {
+  const list = document.getElementById('mathTaskList');
+  list.innerHTML = '';
+
+  mathTasks.forEach((task, index) => {
+    const div = document.createElement('div');
+    div.className = 'task';
+
+    div.innerHTML = `
+      <span>${task.text}</span>
+      <button onclick="deleteMathTask(${index})">✗</button>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+function deleteMathTask(index) {
+  mathTasks.splice(index, 1);
+  renderMathTasks();
 }
 </script>
 
