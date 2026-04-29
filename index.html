@@ -356,7 +356,8 @@ input.input-error {
     <div id="emailError" class="error"></div>
 <input id="passwordInput" type="password" placeholder="Password..." />
 <div id="passwordError" class="error"></div>
-<button onclick="login()">Login / Sign up</button>
+<button onclick="login()">Login</button>
+<button onclick="signup()">Create account</button>
     <button onclick="googleLogin()" style="background:#db4437;">
   Continue with Google
 </button>
@@ -567,60 +568,56 @@ function clearErrors() {
 
 }
 function login() {
-  clearErrors(); 
+  clearErrors();
+
   const email = document.getElementById("emailInput").value.trim();
   const password = document.getElementById("passwordInput").value.trim();
 
-  if (!email || !password) {
-    alert("Please enter email and password");
-    return;
-  }
+  if (!email || !password) return;
 
   firebase.auth().signInWithEmailAndPassword(email, password)
+  .then(userCredential => {
+    const user = userCredential.user;
+
+    if (!user.emailVerified) {
+      firebase.auth().signOut();
+      alert("Please verify your email first!");
+      return;
+    }
+
+    currentUser = user.uid;
+    document.getElementById("loginScreen").classList.add("hidden");
+    loadUserData();
+  })
+    .catch(err => {
+      // ❌ DO NOT auto-create account anymore
+      document.getElementById("emailError").textContent = "Wrong email or password";
+      document.getElementById("passwordError").textContent = "Wrong email or password";
+
+      document.getElementById("emailInput").classList.add("input-error");
+      document.getElementById("passwordInput").classList.add("input-error");
+    });
+}
+function signup() {
+  clearErrors();
+
+  const email = document.getElementById("emailInput").value.trim();
+  const password = document.getElementById("passwordInput").value.trim();
+
+  firebase.auth().createUserWithEmailAndPassword(email, password)
     .then(userCredential => {
-      clearErrors(); 
-
       const user = userCredential.user;
-      currentUser = user.uid;
 
-      document.getElementById("welcomeText").textContent =
-        "Welcome " + (user.email);
+      // ✅ SEND VERIFICATION EMAIL
+      user.sendEmailVerification();
 
-      document.getElementById("userEmail").textContent =
-        "User: " + user.email;
+      alert("Verification email sent! Please verify before login.");
 
-      document.getElementById("loginScreen").classList.add("hidden");
-      loadUserData();
+      firebase.auth().signOut(); // force logout until verified
     })
     .catch(err => {
-
-  const emailError = document.getElementById("emailError");
-  const passwordError = document.getElementById("passwordError");
-
-  // RESET OLD ERRORS
-  emailError.textContent = "";
-  passwordError.textContent = "";
-
-  if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-    passwordError.textContent = "Incorrect email or password";
-    document.getElementById("emailInput").classList.add("input-error");
-    document.getElementById("passwordInput").classList.add("input-error");
-  }
-
-  else if (err.code === "auth/invalid-email") {
-    emailError.textContent = "Invalid email format";
-    document.getElementById("emailInput").classList.add("input-error");
-  }
-
-  else if (err.code === "auth/user-not-found") {
-    emailError.textContent = "No account found. Creating one...";
-    // your signup logic already runs here
-  }
-
-  else {
-    passwordError.textContent = "Something went wrong. Try again.";
-  }
-});
+      document.getElementById("emailError").textContent = err.message;
+    });
 }
   function saveTasks() {
   localStorage.setItem('tasks_' + currentUser, JSON.stringify(tasks));
@@ -1057,7 +1054,7 @@ function deleteMathTask(index) {
   renderMathTasks();
 }
 
-document.addEventListener("keydown", e => {
+document.getElementById("passwordInput").addEventListener("keydown", e => {
   if (e.key === "Enter") login();
 });
 
