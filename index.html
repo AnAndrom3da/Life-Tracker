@@ -357,7 +357,6 @@ input.input-error {
 <input id="passwordInput" type="password" placeholder="Password..." />
 <div id="passwordError" class="error"></div>
 <button onclick="login()">Login / Sign up</button>
-    <button onclick="login()">Enter</button>
     <button onclick="googleLogin()" style="background:#db4437;">
   Continue with Google
 </button>
@@ -1057,6 +1056,10 @@ function deleteMathTask(index) {
   mathTasks.splice(index, 1);
   renderMathTasks();
 }
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter") login();
+});
 
 </script>
 
