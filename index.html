@@ -328,6 +328,21 @@
   background: #d1d1d1;
 }
 
+.error {
+  color: #e74c3c;
+  font-size: 13px;
+  text-align: left;
+  margin-bottom: 8px;
+  min-height: 16px;
+}
+
+input.input-error {
+  border: 2px solid red !important;
+  outline: none !important;
+  box-shadow: 0 0 10px red !important;
+  background: #fff5f5;
+}
+
   </style>
 </head>
 
@@ -338,7 +353,9 @@
   <div class="modal-box">
     <h3>Login</h3>
     <input id="emailInput" placeholder="Email..." />
+    <div id="emailError" class="error"></div>
 <input id="passwordInput" type="password" placeholder="Password..." />
+<div id="passwordError" class="error"></div>
 <button onclick="login()">Login / Sign up</button>
     <button onclick="login()">Enter</button>
     <button onclick="googleLogin()" style="background:#db4437;">
@@ -540,13 +557,21 @@ auth.onAuthStateChanged(user => {
     let priorityIndex = null;
     let editIndex = null;
  let currentIndex = null;
+document.getElementById("emailInput").addEventListener("input", clearErrors);
+document.getElementById("passwordInput").addEventListener("input", clearErrors);
+function clearErrors() {
+  document.getElementById("emailError").textContent = "";
+  document.getElementById("passwordError").textContent = "";
+
+  document.getElementById("emailInput").classList.remove("input-error");
+  document.getElementById("passwordInput").classList.remove("input-error");
+
+}
 function login() {
+  clearErrors(); 
   const email = document.getElementById("emailInput").value.trim();
   const password = document.getElementById("passwordInput").value.trim();
-document.getElementById("welcomeText").textContent =
-  "Welcome " + email + "!";
-  document.getElementById("userEmail").textContent =
-  "User: " + name;
+
   if (!email || !password) {
     alert("Please enter email and password");
     return;
@@ -554,22 +579,49 @@ document.getElementById("welcomeText").textContent =
 
   firebase.auth().signInWithEmailAndPassword(email, password)
     .then(userCredential => {
-      currentUser = userCredential.user.uid;
+      clearErrors(); 
+
+      const user = userCredential.user;
+      currentUser = user.uid;
+
+      document.getElementById("welcomeText").textContent =
+        "Welcome " + (user.email);
+
+      document.getElementById("userEmail").textContent =
+        "User: " + user.email;
+
       document.getElementById("loginScreen").classList.add("hidden");
       loadUserData();
     })
-    .catch(() => {
-      // if account doesn't exist → create it
-      firebase.auth().createUserWithEmailAndPassword(email, password)
-        .then(userCredential => {
-          currentUser = userCredential.user.uid;
-          document.getElementById("loginScreen").classList.add("hidden");
-          loadUserData();
-        })
-        .catch(err => {
-          alert(err.message);
-        });
-    });
+    .catch(err => {
+
+  const emailError = document.getElementById("emailError");
+  const passwordError = document.getElementById("passwordError");
+
+  // RESET OLD ERRORS
+  emailError.textContent = "";
+  passwordError.textContent = "";
+
+  if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+    passwordError.textContent = "Incorrect email or password";
+    document.getElementById("emailInput").classList.add("input-error");
+    document.getElementById("passwordInput").classList.add("input-error");
+  }
+
+  else if (err.code === "auth/invalid-email") {
+    emailError.textContent = "Invalid email format";
+    document.getElementById("emailInput").classList.add("input-error");
+  }
+
+  else if (err.code === "auth/user-not-found") {
+    emailError.textContent = "No account found. Creating one...";
+    // your signup logic already runs here
+  }
+
+  else {
+    passwordError.textContent = "Something went wrong. Try again.";
+  }
+});
 }
   function saveTasks() {
   localStorage.setItem('tasks_' + currentUser, JSON.stringify(tasks));
@@ -1005,6 +1057,7 @@ function deleteMathTask(index) {
   mathTasks.splice(index, 1);
   renderMathTasks();
 }
+
 </script>
 
 </body>
