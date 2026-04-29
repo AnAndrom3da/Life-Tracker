@@ -579,12 +579,6 @@ function login() {
   .then(userCredential => {
     const user = userCredential.user;
 
-    if (!user.emailVerified) {
-      firebase.auth().signOut();
-      alert("Please verify your email first!");
-      return;
-    }
-
     currentUser = user.uid;
     document.getElementById("loginScreen").classList.add("hidden");
     loadUserData();
